@@ -51,10 +51,11 @@ if os.uname()[0]=="Darwin": ## it is Mac OS
   MacOS=1; ## MacOS is true
 keepTemp = 0; ## by default, do not keep temp
 lite=0; ## by default, do not do the lite
+sorted_bamfiles=0; ## by default, bamfiles provided are not sorted
 
 ### checking out the argument names
 #validArgList=['-s1','-b1','-s2','-b2','-gtf','-bi','-o','-t','-len','-a','-r1','-r2','-sd1','-sd2','-c','-analysis','-expressionChange','-keepTemp'];
-validArgList=['-s1','-b1','-s2','-b2','-gtf','-bi','-o','-t','-len','-a','-r1','-r2','-sd1','-sd2','-c','-analysis','-keepTemp','-libType','-lite', '-novelSS'];
+validArgList=['-s1','-b1','-s2','-b2','-gtf','-bi','-o','-t','-len','-a','-r1','-r2','-sd1','-sd2','-c','-analysis','-keepTemp','-libType','-lite', '-novelSS', '-sorted'];
 for argIndex in range(1,len(sys.argv)): ## going through the all parameters 
   if(sys.argv[argIndex][0]=='-' and sys.argv[argIndex] not in validArgList): ## incorrect argument
     print ('Not valid argument: %s' % sys.argv[argIndex]);
@@ -114,9 +115,14 @@ for paramIndex in range(1,len(sys.argv)): ## going through the all parameters
     paramIndex += 1;  ## increase index
     libType = sys.argv[paramIndex];
   elif (sys.argv[paramIndex] == '-keepTemp'):  ## keep temp files, no value needed
+    paramIndex += 1;  ## increase index
     keepTemp = 1;  ## keep temp files
   elif (sys.argv[paramIndex] == '-lite'):  ## keep temp files, no value needed
+    paramIndex += 1;  ## increase index
     lite = 1;  ## keep temp files
+  elif (sys.argv[paramIndex] == '-sorted'):  ## sorted BAM file provided, no value needed
+    paramIndex += 1;  ## increase index
+    sorted_bamfile = 1;  ## sorted BAM provided
   elif (sys.argv[paramIndex] == '-novelSS'):  ## find novel splice sites (0 no, 1 yes)
     paramIndex += 1;  ## increase index
     novelSS = int(sys.argv[paramIndex]);
@@ -429,10 +435,16 @@ def indexBamFile(): ## indexing bam files to use pysam
       bam_fn = sample_1[rr];
 
     if LooseVersion(pysam.version.__samtools_version__) < LooseVersion('1.3'):
-      pysam.sort(bam_fn, rTempFolder+'/aligned.sorted'); ## it will make aligned.sorted.bam file
+      if sorted_bamfile:
+        os.symlink(os.path.abspath(bam_fn), rTempFolder+'/aligned.sorted.bam'); ## softlinks aligned.sorted.bam file from sorted source
+      else:
+        pysam.sort(bam_fn, rTempFolder+'/aligned.sorted'); ## it will make aligned.sorted.bam file
       pysam.index(rTempFolder+'/aligned.sorted.bam'); ## it will make aligned.sorted.bam.bai file
     else:
-      pysam.sort(bam_fn, '-o', rTempFolder+'/aligned.sorted.bam'); ## it will make aligned.sorted.bam file
+      if sorted_bamfile:
+        os.symlink(os.path.abspath(bam_fn), rTempFolder+'/aligned.sorted.bam'); ## softlinks aligned.sorted.bam file from sorted source
+      else:
+        pysam.sort(bam_fn, '-o', rTempFolder+'/aligned.sorted.bam'); ## it will make aligned.sorted.bam file
       pysam.index(rTempFolder+'/aligned.sorted.bam'); ## it will make aligned.sorted.bam.bai file
 
   for rr in range(0,len(sample_2)): ## for each replicate of sample_2
